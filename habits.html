@@ -1,0 +1,220 @@
+<!-- Co-Edited by CHatGPT 5 -->
+{% extends "base.html" %}
+{% block title %}Your Habits — MindSetGo{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <section class="hero">
+    <h1 class="h1">Stay on track, {{ user.username }}</h1>
+    <p class="muted">{{ hero_quote|default('Daily momentum, weekly wins, and shiny achievements.') }}</p>
+    {% if reminders and reminders|length > 0 %}
+      <div class="reminder-rail">
+        {% for r in reminders %}
+          <div class="reminder pill pill-{{ 'warn' if r.category=='warning' else 'info' }}">{{ r.text }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <div class="grid grid-2-1 gap-8">
+    <section class="card">
+      <div class="row-between">
+        <h2 class="h2">Your habits</h2>
+        <span class="tag">Points: {{ user.points }}</span>
+      </div>
+
+{% if habits|length == 0 %}
+  <div class="empty-state">
+    <p class="muted">No habits yet. Pick a starter below — you can edit it anytime.</p>
+
+    <div class="rec-grid">
+      {% for r in recommended or [] %}
+        <div class="rec-card">
+          <div class="rec-main">
+            <div class="rec-title">{{ r.name }}</div>
+            <div class="rec-meta">
+              <span class="chip">{{ r.frequency|capitalize }}</span>
+              <span class="chip">Goal: {{ r.goal }}</span>
+            </div>
+          </div>
+          <form method="post" action="{{ url_for('habits') }}">
+            <input type="hidden" name="name" value="{{ r.name }}">
+            <input type="hidden" name="frequency" value="{{ r.frequency }}">
+            <input type="hidden" name="goal" value="{{ r.goal }}">
+            <button class="btn btn-primary btn-sm">Add</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="muted small" style="margin-top:.5rem;">
+      Not your style? Use “Add a habit” on the right to create your own.
+    </div>
+  </div>
+{% else %}
+
+        <ul class="list">
+          {% for h in habits %}
+            <li class="habit">
+              <div class="habit-head">
+                <div class="habit-title">
+                  <strong>{{ h.name }}</strong>
+                </div>
+                <div class="habit-meta">
+                  <span class="chip">{{ h.frequency|capitalize }}</span>
+                  <span class="chip">Goal: {{ h.goal }}</span>
+                  <span class="chip">🔥 Streak: {{ h.current_streak }}</span>
+                  <span class="chip">Best: {{ h.longest_streak }}</span>
+                </div>
+              </div>
+
+              <div class="habit-body">
+                {% set s = history_data.get(h.id) %}
+                <div class="spark-wrap">
+                  <div class="muted small">
+                    {{ 'Last 8 weeks' if s and s['scope'] == 'weeks' else 'Last 7 days' }}
+                  </div>
+                  <canvas
+                    class="spark"
+                    data-values="{{ (s['values'] if s else [0,0,0,0,0,0,0])|join(',') }}"
+                    data-xlabels="{{ (s['labels'] if s else [])|join('|') }}"
+                    data-scope="{{ s['scope'] if s else 'days' }}"
+                  ></canvas>
+                </div>
+
+                {% if h.frequency == 'daily' %}
+                  {% set done = progress_today.get(h.id, 0) %}
+                  <div class="progress">
+                    <div class="bar" style="--val: {{ (100 * done / (h.goal if h.goal else 1))|round(2) }}%"></div>
+                  </div>
+                  <form class="form-inline" method="post" action="{{ url_for('complete_habit', habit_id=h.id) }}">
+                    <input type="number" name="count" min="0" step="1" value="{{ done }}" aria-label="Today count for {{ h.name }}">
+                    <button class="btn btn-primary">Save</button>
+                  </form>
+                {% else %}
+                  {% set total = weekly_progress.get(h.id, 0) %}
+                  <div class="progress">
+                    <div class="bar" style="--val: {{ (100 * total / (h.goal if h.goal else 1))|round(2) }}%"></div>
+                  </div>
+                  <form class="form-inline" method="post" action="{{ url_for('complete_habit', habit_id=h.id) }}">
+                    <input type="number" name="count" min="0" step="1" value="{{ progress_today.get(h.id, 0) }}" aria-label="Add today for {{ h.name }}">
+                    <button class="btn btn-primary">Save</button>
+                  </form>
+                {% endif %}
+
+                <details class="details mt-3">
+                  <summary>Reminders</summary>
+                  <form class="form-inline" method="post" action="{{ url_for('add_reminder', habit_id=h.id) }}">
+                    <input type="time" name="time" required>
+                    <button class="btn btn-ghost">Add time</button>
+                  </form>
+                  {% if h.reminders %}
+                    <div class="reminder-list">
+                      {% for r in h.reminders %}
+                        <form method="post" action="{{ url_for('delete_reminder', habit_id=h.id, rid=r.id) }}" class="inline-form">
+                          <span class="chip">{{ "%02d:%02d"|format(r.hour, r.minute) }}</span>
+                          <button class="btn btn-text danger">Delete</button>
+                        </form>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <p class="muted small">No reminder times yet.</p>
+                  {% endif %}
+                </details>
+
+                <details class="details mt-2">
+                  <summary>Edit habit</summary>
+                  <form id="edit-{{ h.id }}" class="form-grid" method="post" action="{{ url_for('edit_habit', habit_id=h.id) }}">
+                    <label>
+                      <span>Name</span>
+                      <input name="name" value="{{ h.name }}" required>
+                    </label>
+                    <label>
+                      <span>Frequency</span>
+                      <select name="frequency" class="fancy-select" required>
+                        <option value="daily" {{ 'selected' if h.frequency=='daily' else '' }}>Daily</option>
+                        <option value="weekly" {{ 'selected' if h.frequency=='weekly' else '' }}>Weekly</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Goal</span>
+                      <input type="number" name="goal" min="1" step="1" value="{{ h.goal }}" required>
+                    </label>
+                  </form>
+                  <div class="edit-actions">
+                    <form method="post" action="{{ url_for('delete_habit', habit_id=h.id) }}" onsubmit="return confirm('Delete this habit?')">
+                      <button class="btn btn-danger">Delete</button>
+                    </form>
+                    <button type="submit" form="edit-{{ h.id }}" class="btn btn-primary">Save changes</button>
+                  </div>
+                </details>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+    <aside class="stack gap-8 sidebar">
+      <section class="card sidebar-card">
+        <div class="card-narrow">
+          <h2 class="h2">Add a habit</h2>
+          <form class="form-grid" method="post" action="{{ url_for('habits') }}">
+            <label>
+              <span>Name</span>
+              <input name="name" required placeholder="e.g. Read 20 pages">
+            </label>
+            <label>
+              <span>Frequency</span>
+              <select name="frequency" class="fancy-select" required>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </label>
+            <label>
+              <span>Goal (units/day or per week)</span>
+              <input type="number" name="goal" min="1" step="1" required placeholder="e.g. 1">
+            </label>
+            <button class="btn btn-primary">Create habit</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="card sidebar-card">
+        <div class="card-narrow">
+          <div class="row-between">
+            <h2 class="h2">Leaderboard</h2>
+            <span class="tag">Top 3</span>
+          </div>
+
+          <ol class="lb">
+            {% for row in leaderboard %}
+              {% set is_me = (row.id==user.id) if (row.id is defined and user.id is defined) else (row.username==user.username) %}
+              <li class="lb-row {{ 'lb-me' if is_me }}">
+                <span class="lb-rank">
+                  {% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}#{{ loop.index }}{% endif %}
+                </span>
+                <span class="lb-user">{{ row.username }}</span>
+                <span class="lb-points">{{ row.points }} pts</span>
+              </li>
+            {% else %}
+              <li class="muted small">No players yet.</li>
+            {% endfor %}
+          </ol>
+
+          {% if not in_top %}
+            <div class="card-subtle">
+              <div class="muted small">Your rank</div>
+              <div class="lb-row lb-me">
+                <span class="lb-rank">#{{ my_rank }}</span>
+                <span class="lb-user">{{ user.username }}</span>
+                <span class="lb-points">{{ user.points }} pts</span>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+<!-- Co-Edited by CHatGPT 5 -->
+{% extends "base.html" %}
+{% block title %}Achievements — MindSetGo{% endblock %}
+{% block content %}
+<div class="container">
+  <section class="card">
+    <h1 class="h1">Achievements</h1>
+    <div class="grid grid-cards">
+      {% for a in items %}
+        <div class="achv {{ 'unlocked' if a.unlocked else 'locked' }}">
+          <div class="achv-icon">{{ a.icon }}</div>
+          <div class="achv-body">
+            <div class="achv-title">{{ a.name }}</div>
+            <div class="achv-desc">{{ a.description }}</div>
+            {% if a.unlocked_at %}
+              <div class="achv-date">Unlocked: {{ a.unlocked_at.strftime("%Y-%m-%d") }}</div>
+            {% else %}
+              <div class="achv-date muted">Locked</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

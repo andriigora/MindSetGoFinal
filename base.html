@@ -1,0 +1,333 @@
+<!-- Co-Edited by CHatGPT 5 -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}MindSetGo{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b1220" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="bg-aurora"></div>
+
+  <header class="site-header">
+    <a class="brand" href="{{ url_for('habits') if session.get('user_id') else url_for('login') }}">
+      <span class="logo">✦</span>
+      <span class="brand-text">MindSetGo</span>
+    </a>
+
+    <nav class="main-nav">
+      {% if session.get('user_id') %}
+        <a class="nav-link" href="{{ url_for('habits') }}">Habits</a>
+        <a class="nav-link" href="{{ url_for('achievements_page') }}">Achievements</a>
+        <a class="nav-link" href="{{ url_for('dashboard') }}">Account</a>
+        <form action="{{ url_for('logout') }}" method="get" class="inline-form">
+          <button class="btn btn-ghost">Logout</button>
+        </form>
+      {% else %}
+        <a class="nav-link" href="{{ url_for('login') }}">Log in</a>
+        <a class="nav-link" href="{{ url_for('register') }}">Sign up</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  {% set cat_map = {'success':'success','info':'info','warning':'warning','danger':'danger','error':'danger'} %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack" role="status" aria-live="polite">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ cat_map.get(category, 'info') }}">
+            <span>{{ message }}</span>
+            <button type="button" class="flash-close" onclick="this.parentElement.remove()">×</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main class="page">{% block content %}{% endblock %}</main>
+
+  <footer class="site-footer">
+    <div>© {{ 2025 }} MindSetGo • Built for focus, consistency, and momentum</div>
+  </footer>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    }
+  </script>
+
+  <script>
+    (function () {
+      const DURATION = 3000;
+      const flashes = document.querySelectorAll('.flash-stack .flash');
+      flashes.forEach((el, i) => {
+        let timerId;
+        const start = () => {
+          timerId = setTimeout(() => {
+            el.classList.add('flash-hide');
+            setTimeout(() => el.remove(), 320);
+          }, DURATION + i * 150);
+        };
+        const stop = () => clearTimeout(timerId);
+        el.addEventListener('mouseenter', stop);
+        el.addEventListener('mouseleave', start);
+        el.addEventListener('focusin', stop);
+        el.addEventListener('focusout', start);
+        start();
+      });
+    })();
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function enhanceOne(sel) {
+        const wrap = document.createElement('div');
+        wrap.className = 'fs';
+        sel.parentNode.insertBefore(wrap, sel);
+        wrap.appendChild(sel);
+        sel.classList.add('fancy-hidden');
+
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'fs-trigger';
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = sel.options[sel.selectedIndex]?.text || '';
+        const caret = document.createElement('span');
+        caret.className = 'fs-caret';
+        trigger.append(labelSpan, caret);
+        wrap.insertBefore(trigger, sel);
+
+        const list = document.createElement('div');
+        list.className = 'fs-list';
+        wrap.appendChild(list);
+
+        const rebuildOptions = () => {
+          list.innerHTML = '';
+          Array.from(sel.options).forEach((opt) => {
+            if (opt.disabled) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'fs-option';
+            btn.textContent = opt.text;
+            btn.setAttribute('role','option');
+            if (opt.selected) btn.setAttribute('aria-selected','true');
+            btn.addEventListener('click', () => {
+              sel.value = opt.value;
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+              labelSpan.textContent = opt.text;
+              list.querySelectorAll('.fs-option[aria-selected="true"]').forEach(el => el.removeAttribute('aria-selected'));
+              btn.setAttribute('aria-selected','true');
+              close();
+            });
+            list.appendChild(btn);
+          });
+        };
+        rebuildOptions();
+
+        let open = false;
+        const openMenu = () => {
+          if (open) return;
+          wrap.classList.add('fs-open'); open = true;
+          (list.querySelector('.fs-option[aria-selected="true"]') || list.querySelector('.fs-option'))?.focus({ preventScroll:true });
+        };
+        const close = () => { wrap.classList.remove('fs-open'); open = false; };
+
+        trigger.addEventListener('click', () => open ? close() : openMenu());
+        document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
+
+        trigger.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMenu(); }
+        });
+        list.addEventListener('keydown', (e) => {
+          const opts = Array.from(list.querySelectorAll('.fs-option'));
+          const i = opts.indexOf(document.activeElement);
+          if (e.key === 'Escape') { e.preventDefault(); close(); trigger.focus(); }
+          else if (e.key === 'ArrowDown') { e.preventDefault(); (opts[i+1] || opts[0]).focus(); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); (opts[i-1] || opts[opts.length-1]).focus(); }
+          else if (e.key === 'Home') { e.preventDefault(); opts[0].focus(); }
+          else if (e.key === 'End') { e.preventDefault(); opts[opts.length-1]).focus(); }
+          else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.activeElement?.click(); }
+        });
+
+        sel.addEventListener('change', () => {
+          const opt = sel.options[sel.selectedIndex];
+          if (opt) labelSpan.textContent = opt.text;
+          rebuildOptions();
+        }, { passive:true });
+      }
+
+      document.querySelectorAll('select.fancy-select').forEach(enhanceOne);
+    });
+  </script>
+
+  <script>
+  (() => {
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+
+    function drawOne(cv){
+      const values = (cv.dataset.values || '').split(',').map(v => +v || 0);
+      const labels = (cv.dataset.xlabels || '').split('|');
+      const W = cv.clientWidth || 320;
+      const H = cv.clientHeight || 92;
+
+      cv.width  = Math.round(W * DPR);
+      cv.height = Math.round(H * DPR);
+
+      const ctx = cv.getContext('2d');
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      const m = { top: 6, right: 18, bottom: (W < 420 ? 30 : 28), left: (W < 420 ? 28 : 30) };
+      const plotW = Math.max(1, W - m.left - m.right);
+      const plotH = Math.max(1, H - m.top - m.bottom);
+
+      const yMax = Math.max(1, Math.ceil(Math.max(...values)));
+      const yTickCount = Math.min(4, yMax);
+      const yTicks = [];
+      for (let i=0;i<=yTickCount;i++) yTicks.push(Math.round((yMax/yTickCount)*i));
+
+      ctx.strokeStyle = 'rgba(255,255,255,.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      yTicks.forEach(t=>{
+        const y = m.top + plotH - (t / yMax) * plotH + 0.5;
+        ctx.moveTo(m.left, y);
+        ctx.lineTo(m.left + plotW, y);
+      });
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,255,255,.75)';
+      ctx.font = (W < 420 ? '11px' : '12px') + " Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      yTicks.forEach(t=>{
+        const y = m.top + plotH - (t / yMax) * plotH;
+        ctx.fillText(String(t), m.left - 6, y);
+      });
+
+      const n = values.length;
+      const xAt = i => m.left + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
+      const stepPx = n > 1 ? plotW / (n - 1) : plotW;
+      const minGap = W < 420 ? 56 : 46;
+      const every  = Math.max(1, Math.ceil(minGap / stepPx));
+      const shortLbl = s => (s || '').replace(/\b0(\d)\b/, '$1');
+      const textW = s => ctx.measureText(shortLbl(s)).width;
+
+      const xPos = Array.from({length:n}, (_,i)=>xAt(i));
+      let toDraw = [];
+      for (let i=0;i<n;i++){
+        if (i===0 || i===n-1 || i%every===0) toDraw.push(i);
+      }
+      const pad = 8;
+      let culled = [];
+      let lastX = -Infinity, lastW = 0;
+      toDraw.sort((a,b)=>a-b).forEach(idx=>{
+        const x = xPos[idx];
+        const w = textW(labels[idx]||'');
+        if (x - lastX >= (w/2 + lastW/2 + pad)) {
+          culled.push(idx);
+          lastX = x; lastW = w;
+        }
+      });
+      toDraw = culled;
+
+      if (!toDraw.includes(0)) toDraw.unshift(0);
+      if (!toDraw.includes(n-1)) {
+        const li = n-1;
+        const lx = xPos[li], lw = textW(labels[li]||'');
+        const pi = toDraw[toDraw.length-1];
+        if (pi != null) {
+          const px = xPos[pi], pw = textW(labels[pi]||'');
+          if (lx - px < (lw/2 + pw/2 + pad) && pi !== 0) toDraw.pop();
+        }
+        toDraw.push(li);
+      }
+      ctx.textBaseline = 'top';
+      toDraw.forEach(i=>{
+        const x = xPos[i];
+        ctx.textAlign = (i===0) ? 'left' : (i===n-1) ? 'right' : 'center';
+        ctx.fillStyle = 'rgba(255,255,255,.75)';
+        ctx.fillText(shortLbl(labels[i] || ''), x, m.top + plotH + 6);
+      });
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(124,156,255,.95)';
+      ctx.beginPath();
+      for (let i=0;i<n;i++){
+        const x = xAt(i);
+        const y = m.top + plotH - (values[i] / yMax) * plotH;
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(124,156,255,.18)';
+      ctx.lineTo(m.left + plotW, m.top + plotH);
+      ctx.lineTo(m.left,        m.top + plotH);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function renderAll(){
+      document.querySelectorAll('canvas.spark').forEach(drawOne);
+    }
+    window.addEventListener('resize', () => requestAnimationFrame(renderAll));
+    document.addEventListener('DOMContentLoaded', renderAll);
+  })();
+  </script>
+
+  {% block scripts %}{% endblock %}
+
+  <script>
+    (function () {
+      const DEFAULT_MAX = 1_000_000;
+      const DEFAULT_MIN = 0;
+
+      function showValidity(el, text) {
+        el.setCustomValidity(text);
+        el.reportValidity();
+        clearTimeout(el._cvTimer);
+        el._cvTimer = setTimeout(() => el.setCustomValidity(""), 1400);
+      }
+
+      function clampInput(el) {
+        const max = Number(el.getAttribute('max') || el.dataset.max || DEFAULT_MAX);
+        const min = Number(el.getAttribute('min') || el.dataset.min || DEFAULT_MIN);
+        if (el.value === "") return;
+
+        let n = Number(el.value);
+        if (!Number.isFinite(n)) n = min;
+
+        let changed = false;
+        if (n > max) { n = max; changed = true; showValidity(el, `Max ${max.toLocaleString()}`); }
+        if (n < min) { n = min; changed = true; showValidity(el, `Min ${min}`); }
+        if (changed) el.value = String(n);
+      }
+
+      document.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t && t.matches('input[type="number"]')) clampInput(t);
+      });
+
+      document.addEventListener('submit', (e) => {
+        const nums = e.target.querySelectorAll('input[type="number"]');
+        nums.forEach(clampInput);
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('input[type="number"]').forEach((el) => {
+          if (!el.hasAttribute('max')) el.setAttribute('max', DEFAULT_MAX);
+          if (!el.hasAttribute('min')) el.setAttribute('min', DEFAULT_MIN);
+          el.setAttribute('inputmode', 'numeric');
+        });
+      });
+    })();
+  </script>
+  <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+</body>
+</html>
