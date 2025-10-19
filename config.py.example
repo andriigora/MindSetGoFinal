@@ -1,0 +1,34 @@
+from datetime import timedelta
+import os
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+SETTINGS = {
+    # Flask
+    'DEBUG': True,
+    'SECRET_KEY': '',
+    'SQLALCHEMY_DATABASE_URI': f"sqlite:///{os.path.join(basedir, 'instance', 'users.db')}",
+    'PERMANENT_SESSION_LIFETIME': timedelta(minutes=100),
+    'ENABLE_REMINDER_SCHEDULER': False,
+        'CRON_TOKEN': os.environ.get('CRON_TOKEN', ''),
+
+    # ── Notifications & Email ─────────────────────────────────────────
+    'TIMEZONE': 'Europe/Zurich',
+    'REMINDER_HOUR_LOCAL': 18,
+
+    'EMAIL_ENABLED': True,
+    'MAIL_SERVER': 'smtp.gmail.com',
+    'MAIL_PORT': 587,
+    'MAIL_USE_TLS': True,
+    'MAIL_USERNAME': '',
+    'MAIL_PASSWORD': '',
+    'MAIL_DEFAULT_SENDER': 'MindSetGo <mindsetgo.ag@gmail.com>',
+
+    # ── Web Push (VAPID) ─────────────────────────────────────────────
+    'VAPID_PUBLIC_KEY':  "",
+    'VAPID_PRIVATE_KEY': "",
+    'VAPID_CLAIMS': {"sub": "mailto:mindsetgo.ag@gmail.com"},
+
+    # ── Codes ────────────────────────────────────────────────────────
+    'CODE_TTL_MINUTES': 15,
+}
